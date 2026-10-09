@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Study Planner</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" id="meta-theme" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Study Planner">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" href="icons/icon-192.png">
+    <style>
+        :root {
+            --app-h: 100dvh;
+            --bg:#f3f4f6; --surface:#ffffff; --surface2:#f6f7f9; --border:#d9dde4; --border-soft:#eceef2;
+            --text:#1f2937; --muted:#5b6473; --subtle:#8a93a1;
+            --accent:#6366f1; --accent-ink:#4338ca; --accent-bg:#eef2ff; --accent-soft:#e0e7ff;
+            --chip-bg:#eef0f3; --chip-text:#454e5d;
+            --ok:#047857; --ok-bg:#d1fae5; --ok-text:#065f46;
+            --bad:#dc2626; --danger-bg:#fee2e2; --danger-text:#991b1b;
+            --warn-bg:#ffedd5; --warn-text:#9a3412;
+            --stat-mat:#eef0ff; --stat-tem:#e9faf1; --stat-atv:#fff0f0; --stat-med:#eaf3ff;
+            --input-bg:#ffffff; --input-border:#d1d5db;
+        }
+        body.dark {
+            --bg:#0a0b0e; --surface:#15171c; --surface2:#222632; --border:#3a4050; --border-soft:#2c313d;
+            --text:#f2f4f8; --muted:#b4bccb; --subtle:#8f99ab;
+            --accent:#6366f1; --accent-ink:#b4bdff; --accent-bg:#262a55; --accent-soft:#2d3270;
+            --chip-bg:#2c313d; --chip-text:#d5dbe6;
+            --ok:#4ade80; --ok-bg:#12372a; --ok-text:#9af0bd;
+            --bad:#ff8a8a; --danger-bg:#401d24; --danger-text:#ffb3b3;
+            --warn-bg:#40290f; --warn-text:#ffc78a;
+            --stat-mat:#232857; --stat-tem:#133a2b; --stat-atv:#432026; --stat-med:#17304f;
+            --input-bg:#222632; --input-border:#475066;
+            color-scheme: dark;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        html { height: 100%; }
+        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; height: var(--app-h, 100vh); overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+
+        .container { width: 100%; max-width: 414px; background-color: var(--surface); height: 100%; position: relative; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transition: background-color 0.3s; }
+
+        .content { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 20px 28px 20px; scrollbar-width: none; }
+        .content::-webkit-scrollbar { display: none; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .modal { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); z-index: 50; justify-content: center; align-items: flex-end; }
+        .modal.active { display: flex; }
+        .modal-content { background-color: var(--surface); color: var(--text); width: 100%; max-width: 414px; border-top-left-radius: 24px; border-top-right-radius: 24px; max-height: 92%; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom, 0px); }
+        .m-head { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .m-head h3 { font-size: 18px; font-weight: bold; }
+        .m-close { background: none; border: none; cursor: pointer; display: flex; color: inherit; padding: 4px; }
+        .m-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+        .m-foot { padding: 16px 20px 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+        .lbl { font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px; }
+
+        /* barra inferior: faz parte do layout (não flutua), então nunca fica atrás da barra do celular */
+        nav { background-color: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px calc(10px + max(env(safe-area-inset-bottom, 0px), var(--nav-extra, 0px))) 16px; display: flex; justify-content: space-between; align-items: center; position: relative; flex-shrink: 0; width: 100%; z-index: 40; transition: background-color 0.3s, border-color 0.3s; }
+        .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--subtle); cursor: pointer; font-size: 11px; font-weight: 600; padding: 4px 8px; min-width: 56px; }
+        .nav-btn.active { color: var(--accent-ink); }
+
+        .card { background-color: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; padding: 16px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: background-color 0.3s, border-color 0.3s; }
+        body.dark .card { background-color: #1c1f27; border-color: var(--border-soft); box-shadow: none; }
+
+        input, select, textarea { width: 100%; border: 1px solid var(--input-border); border-radius: 12px; padding: 12px; font-size: 14px; outline: none; background: var(--input-bg); color: var(--text); font-family: inherit; }
+        input::placeholder, textarea::placeholder { color: var(--subtle); }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(99,102,241,.35); }
+        button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+
+        button.primary { background-color: #6366f1; color: white; border: none; border-radius: 12px; padding: 14px; font-weight: bold; width: 100%; cursor: pointer; }
+        button.primary:hover { background-color: #4f46e5; }
+        .btn-outline { background: none; border: 1px solid var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 11px; font-weight: 600; width: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; }
+        .btn-danger { background: var(--danger-bg) !important; color: var(--danger-text) !important; }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+        .stat { position: relative; text-align: left; border: 1px solid transparent; border-radius: 16px; padding: 16px; cursor: pointer; color: var(--text); font: inherit; display: block; width: 100%; }
+        .stat:active { transform: scale(.98); }
+        .stat-n { display: block; font-size: 24px; font-weight: bold; }
+        .stat-l { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .stat-go { position: absolute; top: 14px; right: 12px; color: var(--muted); display: flex; }
+        .stat-mat { background: var(--stat-mat); } .stat-tem { background: var(--stat-tem); }
+        .stat-atv { background: var(--stat-atv); } .stat-med { background: var(--stat-med); }
+        body.dark .stat { border-color: rgba(255,255,255,.06); }
+
+        .row { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--surface2); border-radius: 12px; cursor: pointer; width: 100%; border: 0; color: var(--text); text-align: left; font: inherit; }
+        .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .row-main strong { font-size: 14px; }
+        .row-main small { font-size: 12px; color: var(--muted); }
+        .row-val { font-weight: bold; font-size: 15px; }
+        .row .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .row svg { color: var(--subtle); }
+        .grp { font-size: 13px; font-weight: 700; color: var(--accent-ink); margin: 4px 0 -6px; }
+        .vazio { color: var(--muted); font-size: 14px; line-height: 1.5; }
+        .thumb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+        .thumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface2); border: 1px solid var(--border); }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+        .thumb .rm { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0,0,0,.72); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .meta-box { border-radius: 14px; padding: 14px; background: var(--accent-bg); border: 1px solid var(--border); }
+
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0; }
+        .avatar.big { width: 76px; height: 76px; font-size: 24px; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .stepper { display: flex; align-items: center; gap: 12px; }
+        .stepper button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--accent); background: none; color: var(--accent-ink); font-size: 22px; font-weight: bold; cursor: pointer; }
+        .stepper output { min-width: 56px; text-align: center; font-weight: bold; }
+        .code-editor {
+            width:100%; min-height:220px; resize:vertical; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+            line-height:1.5; background:#111827 !important; color:#f9fafb !important; border:1px solid #374151 !important;
+        }
+        .challenge-box { background: var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
+        .test-case { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; background:#111827; color:#f9fafb; border-radius:8px; padding:10px; margin-top:8px; white-space:pre-wrap; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="content" id="main-content">
+            
+            <!-- TAB 1: INÍCIO -->
+            <div id="tab-inicio" class="tab-content active">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h1 style="font-size: 20px; font-weight: bold;">Study Planner</h1>
+                    <div id="avatar-initials" class="avatar">TS</div>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <h2 style="font-size: 28px; font-weight: bold; margin-bottom: 4px;">Olá, <span id="display-name">Thais</span>!</h2>
+                    <p style="color: var(--muted); font-size: 14px;">Continue firme, você está construindo o seu futuro.</p>
+                </div>
+
+                <div class="stats">
+                    <button class="stat stat-mat" onclick="abrirResumo('materias')"><span class="stat-n" id="count-materias">0</span><span class="stat-l">matérias cadastradas</span><span class="stat-go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></button>
+                    <button class="stat stat-tem" onclick="abrirResumo('temas')"><span class="stat-n" id="count-temas">0</span><span class="stat-l">temas cadastrados</span><span class="stat-go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></button>
+                    <button class="stat stat-atv" onclick="abrirResumo('atividades')"><span class="stat-n" id="count-atv">0</span><span class="stat-l">atividades pendentes</span><span class="stat-go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></button>
+                    <button class="stat stat-med" onclick="abrirResumo('media')"><span class="stat-n" id="dashboard-media">—</span><span class="stat-l">média geral</span><span class="stat-go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></button>
+                </div>
+
+                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 16px;">Próximas provas</h3>
+                <div id="upcoming-exams-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            </div>
+
+            <!-- TAB 2: MATÉRIAS -->
+            <div id="tab-materias" class="tab-content">
+                <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 24px;">Matérias</h2>
+                
+                <div style="margin-bottom: 24px;">
+                    <input type="text" placeholder="Buscar matéria...">
+                </div>
+
+                <button class="primary" onclick="novaMateria()" style="margin-bottom: 24px;">+ Adicionar matéria</button>
+
+                <div id="materias-list" style="display: flex; flex-direction: column; gap: 16px;"></div>
+            </div>
+
+            <!-- TAB 3: EXERCÍCIOS -->
+            <div id="tab-exercicios" class="tab-content">
+                <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">Exercícios</h2>
+                <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">Escolha exatamente o que você quer praticar.</p>
+
+                <div class="card" style="margin-bottom:20px;">
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px;">1. Matéria</label>
+                        <select id="ex-materia-select" onchange="atualizarTemasExercicios()"></select>
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px;">2. Tema</label>
+                        <select id="ex-tema-select" onchange="atualizarTiposExercicios()"></select>
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px;">3. Tipo de exercício</label>
+                        <select id="ex-tipo-select" onchange="atualizarModoProgramacao()">
+                            <option value="conta">Exercícios de conta / cálculo</option>
+                            <option value="alternativa">Questões de alternativa</option>
+                            <option value="dissertacao">Questões de dissertação</option>
+                            <option value="programar">Desafio de programação</option>
+                        </select>
+                    </div>
+
+                    <div id="programming-language-wrap" style="display:none;margin-bottom:16px;">
+                        <label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px;">Linguagem</label>
+                        <select id="ex-linguagem-select">
+                            <option value="Python">Python</option>
+                            <option value="JavaScript">JavaScript</option>
+                            <option value="Java">Java</option>
+                            <option value="C">C</option>
+                            <option value="C++">C++</option>
+                        </select>
+                    </div>
+
+                    <button class="primary" onclick="gerarExercicioSelecionado()">Praticar este tema</button>
+                </div>
+
+                <div id="exercicios-gerados" style="display:none;">
+                    <div id="exercise-context" style="font-size:13px;color:var(--muted);margin-bottom:12px;"></div>
+                    <div class="card">
+                        <p style="font-weight:600;margin-bottom:16px;" id="questao-texto"></p>
+                        <div id="questao-opcoes" style="display:flex;flex-direction:column;gap:12px;"></div>
+                        <div id="questao-feedback" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: DESEMPENHO -->
+            <div id="tab-desempenho" class="tab-content">
+                <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 24px;">Desempenho</h2>
+
+                <div class="card" style="display: flex; align-items: center; gap: 16px; margin-bottom: 32px;">
+                    <div style="width: 56px; height: 56px; background-color: var(--accent-soft); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--accent-ink); font-size: 24px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--muted); font-weight: bold; text-transform: uppercase;">Média Geral</div>
+                        <div style="font-size: 28px; font-weight: bold;" id="dashboard-media-desempenho">—</div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 16px;">Desempenho por matéria</h3>
+                <div id="desempenho-materias-list" style="display: flex; flex-direction: column; gap: 20px;"></div>
+            </div>
+
+            <!-- TAB 5: MAIS (CONFIGURAÇÕES / EDIÇÃO DE PERFIL) -->
+            <div id="tab-mais" class="tab-content">
+                <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 24px;">Configurações</h2>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 16px;">Editar Perfil</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;">
+                            <div id="perfil-foto-prev" class="avatar big">TS</div>
+                            <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                                <div class="btn-row">
+                                    <button type="button" class="btn-outline" onclick="document.getElementById('perfil-galeria').click()">Galeria</button>
+                                    <button type="button" class="btn-outline" onclick="document.getElementById('perfil-camera').click()">Câmera</button>
+                                </div>
+                                <button type="button" id="btn-remover-foto-perfil" class="btn-outline" style="display:none" onclick="removerFotoPerfil()">Remover foto</button>
+                            </div>
+                            <input type="file" id="perfil-galeria" accept="image/*" style="display:none" onchange="definirFotoPerfil(this)">
+                            <input type="file" id="perfil-camera" accept="image/*" capture="user" style="display:none" onchange="definirFotoPerfil(this)">
+                        </div>
+                        <label style="font-size: 14px; color: var(--muted);">Nome Principal</label>
+                        <input type="text" id="edit-nome">
+                        <button class="primary" onclick="salvarPerfil()">Salvar Alterações</button>
+                    </div>
+                    <p id="msg-sucesso-perfil" style="color: var(--ok); font-size: 14px; margin-top: 12px; display: none; text-align: center;">Nome atualizado com sucesso!</p>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">Espaço abaixo da barra de ícones</h3>
+                    <p style="font-size: 13px; color: var(--muted); margin-bottom: 14px;">Se a barra de ícones ainda ficar escondida atrás dos botões do celular, aumente este valor até ela aparecer inteira.</p>
+                    <div class="stepper">
+                        <button type="button" onclick="ajustarEspacoNav(-8)" aria-label="Diminuir">−</button>
+                        <output id="nav-extra-val">48 px</output>
+                        <button type="button" onclick="ajustarEspacoNav(8)" aria-label="Aumentar">+</button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">Backup dos dados</h3>
+                    <p style="font-size: 13px; color: var(--muted); margin-bottom: 14px;">Seus dados ficam salvos neste navegador. Baixe um backup e guarde no Drive ou no e-mail para nunca perder nada.</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button class="primary" onclick="exportarBackup()">Exportar backup</button>
+                        <button class="primary" style="background: none; border: 1px solid #6366f1; color: var(--accent-ink);" onclick="document.getElementById('backup-file').click()">Importar backup</button>
+                        <input type="file" id="backup-file" accept=".json,application/json" style="display:none" onchange="importarBackup(this)">
+                    </div>
+                    <p id="backup-status" style="font-size: 12px; color: var(--muted); margin-top: 12px;"></p>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="card" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleNotifications()">
+                        <div style="font-weight: 600;">Notificações</div>
+                        <div id="notif-toggle" style="width: 44px; height: 24px; background-color: #6366f1; border-radius: 12px; position: relative;">
+                            <div id="notif-dot" style="width: 18px; height: 18px; background-color: #fff; border-radius: 50%; position: absolute; top: 3px; left: 23px; transition: transform 0.3s;"></div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleDarkMode()">
+                        <div style="font-weight: 600;" id="dark-mode-text">Modo Escuro</div>
+                        <span style="display:flex;" id="dark-mode-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- NAVIGATION -->
+        <nav>
+            <button onclick="switchTab('inicio')" class="nav-btn active" data-tab="inicio"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Início</span></button>
+            <button onclick="switchTab('materias')" class="nav-btn" data-tab="materias"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Matérias</span></button>
+            <button onclick="switchTab('exercicios')" class="nav-btn" data-tab="exercicios"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><span>Exercícios</span></button>
+            <button onclick="switchTab('desempenho')" class="nav-btn" data-tab="desempenho"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V7"/><path d="M17 16v-3"/></svg><span>Desempenho</span></button>
+            <button onclick="switchTab('mais')" class="nav-btn" data-tab="mais"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg><span>Mais</span></button>
+        </nav>
+
+        <!-- MODAL: Ações da Matéria -->
+        <div id="modal-acoes-materia" class="modal" onclick="if(event.target===this) closeModal('modal-acoes-materia')">
+            <div class="modal-content" style="padding: 20px 20px 28px 20px;">
+                <h3 id="acoes-mat-nome" style="font-size: 18px; font-weight: bold; margin-bottom: 16px;"></h3>
+                <div id="acoes-mat-menu" style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="primary" onclick="editarMateria(acoesMateriaId)" style="display:flex;align-items:center;justify-content:center;gap:8px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar matéria</button>
+                    <button class="primary" onclick="pedirExclusao()" style="display:flex;align-items:center;justify-content:center;gap:8px; background: var(--danger-bg); color: var(--danger-text);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg> Excluir matéria</button>
+                    <button class="primary" onclick="closeModal('modal-acoes-materia')" style="background: var(--border); color: var(--text);">Cancelar</button>
+                </div>
+                <div id="acoes-mat-confirma" style="display: none; flex-direction: column; gap: 10px;">
+                    <p style="font-size: 14px; color: var(--muted);">Excluir esta matéria também apaga os temas e as atividades dela. Essa ação não pode ser desfeita.</p>
+                    <button class="primary" onclick="excluirMateria()" style="background: #dc2626;">Sim, excluir</button>
+                    <button class="primary" onclick="abrirAcoesMateria(acoesMateriaId)" style="background: var(--border); color: var(--text);">Voltar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Adicionar Matéria -->
+        <div id="modal-add-materia" class="modal">
+            <div class="modal-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border);">
+                    <h3 style="font-size: 18px; font-weight: bold;" id="modal-mat-titulo">Nova Matéria</h3>
+                    <button onclick="closeModal('modal-add-materia')" style="background:none;border:none;cursor:pointer;display:flex;color:inherit;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+                <div style="padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                    <div>
+                        <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 4px;">Nome da matéria *</label>
+                        <input type="text" id="new-mat-name" placeholder="Ex: Estatística">
+                    </div>
+                    <div>
+                        <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 4px;">Nome do Professor</label>
+                        <input type="text" id="new-mat-prof">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 4px;">Semestre</label>
+                            <input type="number" id="new-mat-sem">
+                        </div>
+                        <div>
+                            <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 4px;">Dificuldade</label>
+                            <select id="new-mat-diff">
+                                <option value="Fácil">Fácil</option>
+                                <option value="Médio">Médio</option>
+                                <option value="Difícil">Difícil</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 14px; font-weight: 600; display: block; margin-bottom: 4px;">Data da Prova</label>
+                        <input type="date" id="new-mat-date">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; background: var(--danger-bg); padding: 12px; border-radius: 12px;">
+                        <input type="checkbox" id="new-mat-dp" style="width: 20px; height: 20px;">
+                        <label for="new-mat-dp" style="font-size: 14px; font-weight: 600; color: var(--bad);">Matéria de Dependência (DP)</label>
+                    </div>
+                </div>
+                <div style="padding: 20px; border-top: 1px solid var(--border);">
+                    <button class="primary" id="btn-salvar-materia" onclick="salvarMateria()">Salvar Matéria</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Detalhes da Matéria -->
+        <div id="modal-detalhes-materia" class="modal">
+            <div class="modal-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border);">
+                    <h3 style="font-size: 18px; font-weight: bold;" id="det-mat-nome">Matéria</h3>
+                    <button onclick="closeModal('modal-detalhes-materia')" style="background:none;border:none;cursor:pointer;display:flex;color:inherit;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+                <div style="padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; flex: 1;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div>
+                            <p style="font-size: 14px; color: var(--muted);" id="det-mat-prof">Professor</p>
+                            <p style="font-size: 14px; color: var(--muted);" id="det-mat-sem">Semestre</p>
+                        </div>
+                        <span id="det-mat-diff" style="padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold;"></span>
+                    </div>
+
+                    <div class="card" style="background: var(--surface2);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 14px; font-weight: 600;">Data da Prova</span>
+                            <span style="font-weight: bold;" id="det-mat-data">--/--/----</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-size: 14px; font-weight: 600;">Média atual</span>
+                            <span style="font-weight: bold; font-size: 16px;" id="det-mat-nota">0.0</span>
+                        </div>
+                    </div>
+
+                    <div id="det-mat-meta" class="meta-box" style="display:none;"></div>
+
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                            <h4 style="font-size:16px;font-weight:bold;">Temas e conteúdos</h4>
+                            <button onclick="abrirAdicionarTema()" style="border:0;background:var(--accent-bg);color:var(--accent-ink);border-radius:9px;padding:8px 10px;font-weight:600;cursor:pointer;">+ Tema</button>
+                        </div>
+                        <ul id="det-mat-temas" style="display:flex;flex-direction:column;gap:8px;list-style:none;"></ul>
+                    </div>
+
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                            <h4 style="font-size:16px;font-weight:bold;">Notas e atividades</h4>
+                            <button onclick="abrirAdicionarAtividade()" style="border:0;background:var(--accent-bg);color:var(--accent-ink);border-radius:9px;padding:8px 10px;font-weight:600;cursor:pointer;">+ Nota</button>
+                        </div>
+                        <div id="det-mat-atividades" style="display:flex;flex-direction:column;gap:8px;"></div>
+                    </div>
+                </div>
+                <div style="padding: 20px; border-top: 1px solid var(--border);">
+                    <button class="primary" onclick="closeModal('modal-detalhes-materia')" style="background-color: var(--border); color: var(--text);">Fechar</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- MODAL: Tema (novo / editar) -->
+        <div id="modal-add-tema" class="modal" onclick="if(event.target===this) closeModal('modal-add-tema')">
+            <div class="modal-content">
+                <div class="m-head">
+                    <h3 id="tema-modal-titulo">Novo Tema</h3>
+                    <button class="m-close" onclick="closeModal('modal-add-tema')" aria-label="Fechar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+                <div class="m-body">
+                    <div>
+                        <label class="lbl" for="new-tema-name">Nome do tema</label>
+                        <input id="new-tema-name" type="text" placeholder="Ex: Média, mediana e moda">
+                    </div>
+                    <div>
+                        <label class="lbl" for="new-tema-diff">Dificuldade</label>
+                        <select id="new-tema-diff"><option>Fácil</option><option selected>Médio</option><option>Difícil</option></select>
+                    </div>
+                    <div>
+                        <label class="lbl" for="new-tema-texto">Anotações / conteúdo do tema</label>
+                        <textarea id="new-tema-texto" rows="6" placeholder="Escreva aqui o resumo, fórmulas, o que o professor pediu..."></textarea>
+                    </div>
+                    <div>
+                        <span class="lbl">Fotos</span>
+                        <div class="btn-row">
+                            <button type="button" class="btn-outline" onclick="document.getElementById('foto-galeria').click()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg> Galeria</button>
+                            <button type="button" class="btn-outline" onclick="document.getElementById('foto-camera').click()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg> Câmera</button>
+                        </div>
+                        <input type="file" id="foto-galeria" accept="image/*" multiple style="display:none" onchange="adicionarFotosTema(this)">
+                        <input type="file" id="foto-camera" accept="image/*" capture="environment" style="display:none" onchange="adicionarFotosTema(this)">
+                        <div id="tema-fotos" class="thumb-grid"></div>
+                    </div>
+                </div>
+                <div class="m-foot">
+                    <button class="primary" onclick="salvarTema()">Salvar tema</button>
+                    <button class="primary btn-danger" id="btn-excluir-tema" style="display:none" onclick="excluirTema()">Excluir tema</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Adicionar Atividade/Nota -->
+        <div id="modal-add-atividade" class="modal">
+            <div class="modal-content">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid var(--border);">
+                    <h3 style="font-size:18px;font-weight:bold;" id="atv-modal-titulo">Nova atividade / nota</h3>
+                    <button onclick="closeModal('modal-add-atividade')" style="background:none;border:none;cursor:pointer;color:inherit;"><span style="font-size:20px;">×</span></button>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;">
+                    <label style="font-size:14px;font-weight:600;">Nome
+                        <input id="new-atv-name" type="text" placeholder="Ex: P1, trabalho, lista..." style="margin-top:8px;">
+                    </label>
+                    <label style="font-size:14px;font-weight:600;">Tipo
+                        <select id="new-atv-type" style="margin-top:8px;">
+                            <option>Prova</option><option>Atividade</option><option>Exercício</option><option>Seminário</option><option>Trabalho</option>
+                        </select>
+                    </label>
+                    <label style="font-size:14px;font-weight:600;">Tema
+                        <select id="new-atv-tema" style="margin-top:8px;"></select>
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <label style="font-size:14px;font-weight:600;">Nota (vazio = ainda sem nota)
+                            <input id="new-atv-nota" type="number" min="0" max="10" step="0.01" placeholder="0 a 10" style="margin-top:8px;">
+                        </label>
+                        <label style="font-size:14px;font-weight:600;">Peso
+                            <input id="new-atv-peso" type="number" min="0" step="0.1" placeholder="Ex: 4" style="margin-top:8px;">
+                        </label>
+                    </div>
+                    <label style="font-size:14px;font-weight:600;">Data
+                        <input id="new-atv-data" type="date" style="margin-top:8px;">
+                    </label>
+                    <button class="primary" onclick="salvarAtividade()">Salvar atividade</button>
+                    <button class="primary btn-danger" id="btn-excluir-atividade" style="display:none" onclick="excluirAtividade()">Excluir atividade</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Resumo da tela inicial -->
+        <div id="modal-resumo" class="modal" onclick="if(event.target===this) closeModal('modal-resumo')">
+            <div class="modal-content">
+                <div class="m-head">
+                    <h3 id="resumo-titulo"></h3>
+                    <button class="m-close" onclick="closeModal('modal-resumo')" aria-label="Fechar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                </div>
+                <div class="m-body" id="resumo-body"></div>
+            </div>
+        </div>
+
+        <!-- LIGHTBOX de foto -->
+        <div id="modal-foto" class="modal" style="align-items:center;background:rgba(0,0,0,.9);z-index:60;" onclick="closeModal('modal-foto')">
+            <img id="foto-grande" alt="Foto do tema" style="max-width:96%;max-height:90%;border-radius:12px;object-fit:contain;">
+        </div>
+
+    </div>
+
+    <script>
+        const ICONS = {"more": "<circle cx=\"5\" cy=\"12\" r=\"1.5\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\"/><circle cx=\"19\" cy=\"12\" r=\"1.5\"/>", "edit": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z\"/>", "trash": "<path d=\"M3 6h18\"/><path d=\"M8 6V4h8v2\"/><path d=\"M19 6l-1 14H6L5 6\"/><path d=\"M10 11v6M14 11v6\"/>", "home": "<path d=\"M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z\"/>", "book": "<path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20\"/><path d=\"M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z\"/>", "task": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/>", "chart": "<path d=\"M3 3v18h18\"/><path d=\"M7 16v-5\"/><path d=\"M12 16V7\"/><path d=\"M17 16v-3\"/>", "sliders": "<path d=\"M21 4h-7\"/><path d=\"M10 4H3\"/><path d=\"M21 12h-9\"/><path d=\"M8 12H3\"/><path d=\"M21 20h-5\"/><path d=\"M12 20H3\"/><path d=\"M14 2v4\"/><path d=\"M8 10v4\"/><path d=\"M16 18v4\"/>", "trend": "<path d=\"m22 7-8.5 8.5-5-5L2 17\"/><path d=\"M16 7h6v6\"/>", "moon": "<path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z\"/>", "sun": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41\"/>", "x": "<path d=\"M18 6 6 18M6 6l12 12\"/>", "check": "<path d=\"M20 6 9 17l-5-5\"/>", "bookopen": "<path d=\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\"/><path d=\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\"/>"};
+        function icon(n, sz = 18) { return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${ICONS[n]}</svg>`; }
+
+
+        Object.assign(ICONS, {
+            chevron: '<path d="m9 18 6-6-6-6"/>',
+            image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+            note: '<path d="M17 6H3M21 12H3M15 18H3"/>'
+        });
+
+        const CORES = {
+            "Fácil":   { bg: "var(--ok-bg)",     text: "var(--ok-text)",     dot: "#10b981" },
+            "Médio":   { bg: "var(--warn-bg)",   text: "var(--warn-text)",   dot: "#f97316" },
+            "Difícil": { bg: "var(--danger-bg)", text: "var(--danger-text)", dot: "#ef4444" }
+        };
+        const MEDIA_ALVO = 6;
+
+        const fmt = n => Number(n).toFixed(2).replace('.', ',');
+        const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        const temNota = a => !!a && a.nota !== null && a.nota !== undefined && String(a.nota).trim() !== '' && Number.isFinite(Number(a.nota));
+        const pesoDe = a => Number(a.peso) > 0 ? Number(a.peso) : 1;
+        const temNotas = mat => (mat.atividades || []).some(temNota);
+        const corDe = d => CORES[d] || CORES["Médio"];
+        const dataBR = d => d ? String(d).split('-').reverse().join('/') : '';
+
+        function ajustarAltura() { document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); }
+        ajustarAltura();
+        window.addEventListener('resize', ajustarAltura);
+        window.addEventListener('orientationchange', () => setTimeout(ajustarAltura, 250));
+
+        /* ---------- Quanto falta para passar com média 6 ---------- */
+        function numeroProva(a) {
+            const m = /^\s*(?:p|prova)\s*0*([12])\b/i.exec(a.nome || '');
+            return m ? Number(m[1]) : 0;
+        }
+
+        function precisaNota(mat) {
+            const todas = mat.atividades || [];
+            const p1 = todas.filter(a => numeroProva(a) === 1);
+            const p2 = todas.filter(a => numeroProva(a) === 2);
+            const p1ok = p1.some(temNota), p2ok = p2.some(temNota);
+            if (p1ok === p2ok) return null;           // as duas lançadas, ou nenhuma
+            const faltante = p1ok ? 'P2' : 'P1';
+            const ref = (p1ok ? p1 : p2).find(temNota);
+            const pend = (p1ok ? p2 : p1)[0];         // prova cadastrada sem nota (se existir)
+            const peso = pend ? pesoDe(pend) : pesoDe(ref);
+            const lancadas = todas.filter(temNota);
+            const soma = lancadas.reduce((s, a) => s + pesoDe(a), 0);
+            const pts = lancadas.reduce((s, a) => s + Number(a.nota) * pesoDe(a), 0);
+            const min = (MEDIA_ALVO * (soma + peso) - pts) / peso;
+            const maxMedia = (pts + 10 * peso) / (soma + peso);
+            const nota = Math.min(10, Math.max(0, Math.ceil(min * 100 - 1e-9) / 100));
+            let tipo, texto, curto;
+            if (min <= 0) {
+                tipo = 'ok';
+                texto = `Você já garante média ${MEDIA_ALVO} com as notas atuais. Qualquer nota na ${faltante} mantém a aprovação.`;
+                curto = `Já garante média ${MEDIA_ALVO} (qualquer nota na ${faltante})`;
+            } else if (min > 10) {
+                tipo = 'bad';
+                texto = `Mesmo tirando 10 na ${faltante}, a média final seria ${fmt(maxMedia)}, abaixo de ${MEDIA_ALVO}.`;
+                curto = `Não alcança média ${MEDIA_ALVO} nem com 10 na ${faltante}`;
+            } else {
+                tipo = 'need';
+                texto = `Para passar com média ${MEDIA_ALVO}, você precisa de no mínimo ${fmt(nota)} na ${faltante}.`;
+                curto = `Precisa de ${fmt(nota)} na ${faltante} para média ${MEDIA_ALVO}`;
+            }
+            return { faltante, nota, tipo, texto, curto, peso, assumido: !pend, minimo: min };
+        }
+
+        function corMeta(tipo) { return tipo === 'ok' ? 'var(--ok)' : tipo === 'bad' ? 'var(--bad)' : 'var(--accent-ink)'; }
+
+        function pendentes() {
+            const r = [];
+            state.materias.forEach(m => (m.atividades || []).forEach(a => { if (!temNota(a)) r.push({ mat: m, atv: a }); }));
+            return r;
+        }
+
+        function mediaGeral() {
+            const ms = state.materias.filter(temNotas).map(calcularMediaMateria);
+            return ms.length ? { valor: ms.reduce((a, b) => a + b, 0) / ms.length, n: ms.length } : null;
+        }
+
+        /* ---------- Telas de resumo (cards da tela inicial) ---------- */
+        function abrirResumo(tipo) {
+            const t = document.getElementById('resumo-titulo');
+            const b = document.getElementById('resumo-body');
+            let h = '';
+            if (tipo === 'materias') {
+                t.innerText = 'Matérias cadastradas';
+                h = state.materias.length ? state.materias.map(m => {
+                    const c = corDe(m.diff);
+                    return `<button class="row" onclick="irMateria(${m.id})">
+                        <span class="dot" style="background:${c.dot}"></span>
+                        <span class="row-main"><strong>${esc(m.nome)}${m.dp ? ' (DP)' : ''}</strong>
+                        <small>${esc(m.prof)} • Sem. ${esc(m.sem)} • ${m.temas.length} tema(s) • prova ${dataBR(m.data)}</small></span>
+                        <span class="row-val">${temNotas(m) ? fmt(calcularMediaMateria(m)) : '—'}</span>${icon('chevron', 16)}</button>`;
+                }).join('') : '<p class="vazio">Nenhuma matéria cadastrada ainda.</p>';
+            } else if (tipo === 'temas') {
+                t.innerText = 'Temas por matéria';
+                h = state.materias.length ? state.materias.map(m => {
+                    const lista = m.temas.length ? m.temas.map(tm => {
+                        const nf = (tm.fotos || []).length;
+                        const extra = [tm.texto ? 'com anotações' : '', nf ? nf + ' foto' + (nf > 1 ? 's' : '') : ''].filter(Boolean).join(' • ');
+                        return `<button class="row" onclick="irTema(${m.id},${tm.id})">
+                            <span class="row-main"><strong>${esc(tm.nome)}</strong><small>${esc(tm.dificuldade)}${extra ? ' • ' + extra : ''}</small></span>${icon('chevron', 16)}</button>`;
+                    }).join('') : '<p class="vazio">Nenhum tema cadastrado.</p>';
+                    return `<div class="grp">${esc(m.nome)} (${m.temas.length})</div>${lista}`;
+                }).join('') : '<p class="vazio">Nenhuma matéria cadastrada ainda.</p>';
+            } else if (tipo === 'atividades') {
+                t.innerText = 'Atividades pendentes';
+                const pend = pendentes();
+                h = pend.length
+                    ? '<p class="vazio">Atividades ainda sem nota. Toque em uma para lançar a nota.</p>' + pend.map(({ mat, atv }) => {
+                        const tema = mat.temas.find(x => x.id === Number(atv.temaId));
+                        return `<button class="row" onclick="irAtividade(${mat.id},${atv.id})">
+                            <span class="row-main"><strong>${esc(atv.nome)}</strong>
+                            <small>${esc(mat.nome)} • ${esc(atv.tipo)}${tema ? ' • ' + esc(tema.nome) : ''}${atv.data ? ' • ' + dataBR(atv.data) : ''}</small></span>${icon('chevron', 16)}</button>`;
+                    }).join('')
+                    : '<p class="vazio">Nenhuma atividade pendente. Cadastre uma atividade sem nota (em Matérias, dentro da matéria) e ela aparece aqui até você lançar a nota.</p>';
+            } else {
+                t.innerText = 'Média geral';
+                const g = mediaGeral();
+                h = `<div class="meta-box" style="text-align:center;">
+                        <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Média geral (todas as matérias com nota)</div>
+                        <div style="font-size:34px;font-weight:bold;">${g ? fmt(g.valor) : '—'}</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:4px;">${g ? 'baseada em ' + g.n + ' de ' + state.materias.length + ' matéria(s) • meta: ' + MEDIA_ALVO : 'Lance notas para calcular'}</div>
+                    </div>
+                    <div class="grp">Média por matéria</div>`;
+                h += state.materias.length ? state.materias.map(m => {
+                    const tem = temNotas(m), med = calcularMediaMateria(m);
+                    const cor = med >= 7 ? 'var(--accent-ink)' : med >= MEDIA_ALVO ? 'var(--ok)' : 'var(--bad)';
+                    const need = precisaNota(m);
+                    const sub = !tem ? 'Sem notas lançadas' : need ? need.curto : (med >= MEDIA_ALVO ? 'Acima da meta' : 'Abaixo da meta');
+                    return `<button class="row" onclick="irMateria(${m.id})">
+                        <span class="row-main"><strong>${esc(m.nome)}</strong><small>${esc(sub)}</small></span>
+                        <span class="row-val" style="color:${tem ? cor : 'var(--muted)'}">${tem ? fmt(med) : '—'}</span>${icon('chevron', 16)}</button>`;
+                }).join('') : '<p class="vazio">Nenhuma matéria cadastrada ainda.</p>';
+            }
+            b.innerHTML = h;
+            openModal('modal-resumo');
+        }
+
+        function irMateria(id) { closeModal('modal-resumo'); openMateriaDetails(Number(id)); }
+        function irTema(matId, temaId) { closeModal('modal-resumo'); currentMateriaId = Number(matId); abrirTema(temaId); }
+        function irAtividade(matId, atvId) { closeModal('modal-resumo'); currentMateriaId = Number(matId); abrirEditarAtividade(atvId); }
+
+        /* ---------- Fotos dos temas ---------- */
+        let editandoTemaId = null;
+        let temaFotosTmp = [];
+
+        function comprimirImagem(file, max = 1280, q = 0.72) {
+            return new Promise((resolve, reject) => {
+                const fr = new FileReader();
+                fr.onerror = reject;
+                fr.onload = () => {
+                    const img = new Image();
+                    img.onerror = reject;
+                    img.onload = () => {
+                        const k = Math.min(1, max / Math.max(img.width, img.height));
+                        const w = Math.round(img.width * k), h = Math.round(img.height * k);
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(c.toDataURL('image/jpeg', q));
+                    };
+                    img.src = fr.result;
+                };
+                fr.readAsDataURL(file);
+            });
+        }
+
+        async function adicionarFotosTema(input) {
+            const files = Array.from(input.files || []);
+            input.value = '';
+            for (const f of files) {
+                try { temaFotosTmp.push(await comprimirImagem(f)); }
+                catch (e) { aviso('Não consegui abrir uma das imagens.'); }
+            }
+            renderFotosTema();
+        }
+
+        function removerFotoTema(i) { temaFotosTmp.splice(i, 1); renderFotosTema(); }
+
+        function renderFotosTema() {
+            document.getElementById('tema-fotos').innerHTML = temaFotosTmp.map((src, i) =>
+                `<div class="thumb"><img src="${src}" alt="Foto ${i + 1}" onclick="verFoto(${i})">
+                 <button type="button" class="rm" onclick="removerFotoTema(${i})" aria-label="Remover foto">${icon('x', 14)}</button></div>`).join('');
+        }
+
+        function verFoto(i) {
+            document.getElementById('foto-grande').src = temaFotosTmp[i];
+            openModal('modal-foto');
+        }
+
+        function abrirAdicionarTema() {
+            editandoTemaId = null; temaFotosTmp = [];
+            document.getElementById('tema-modal-titulo').innerText = 'Novo Tema';
+            document.getElementById('new-tema-name').value = '';
+            document.getElementById('new-tema-diff').value = 'Médio';
+            document.getElementById('new-tema-texto').value = '';
+            document.getElementById('btn-excluir-tema').style.display = 'none';
+            renderFotosTema();
+            openModal('modal-add-tema');
+        }
+
+        function abrirTema(id) {
+            const mat = getMateriaById(currentMateriaId);
+            const t = mat && mat.temas.find(x => x.id === Number(id));
+            if (!t) return;
+            editandoTemaId = t.id;
+            temaFotosTmp = (t.fotos || []).slice();
+            document.getElementById('tema-modal-titulo').innerText = 'Editar Tema';
+            document.getElementById('new-tema-name').value = t.nome;
+            document.getElementById('new-tema-diff').value = t.dificuldade;
+            document.getElementById('new-tema-texto').value = t.texto || '';
+            const bt = document.getElementById('btn-excluir-tema');
+            bt.style.display = 'block'; bt.innerText = 'Excluir tema'; delete bt.dataset.armado;
+            renderFotosTema();
+            openModal('modal-add-tema');
+        }
+
+        function detalhesAbertos() { return document.getElementById('modal-detalhes-materia').classList.contains('active'); }
+
+        function salvarTema() {
+            const mat = getMateriaById(currentMateriaId);
+            const nome = document.getElementById('new-tema-name').value.trim();
+            if (!mat || !nome) return aviso('Informe o nome do tema.');
+            const dados = {
+                nome,
+                dificuldade: document.getElementById('new-tema-diff').value,
+                texto: document.getElementById('new-tema-texto').value.trim(),
+                fotos: temaFotosTmp.slice()
+            };
+            const existente = editandoTemaId ? mat.temas.find(x => x.id === editandoTemaId) : null;
+            if (existente) Object.assign(existente, dados);
+            else mat.temas.push(Object.assign({ id: Date.now() }, dados));
+            editandoTemaId = null;
+            const det = detalhesAbertos();
+            renderMaterias();
+            if (det) openMateriaDetails(mat.id);
+            closeModal('modal-add-tema');
+        }
+
+        function excluirTema() {
+            const bt = document.getElementById('btn-excluir-tema');
+            if (!bt.dataset.armado) {
+                bt.dataset.armado = '1';
+                bt.innerText = 'Toque de novo para confirmar';
+                setTimeout(() => { delete bt.dataset.armado; bt.innerText = 'Excluir tema'; }, 3500);
+                return;
+            }
+            const mat = getMateriaById(currentMateriaId);
+            if (!mat) return;
+            mat.temas = mat.temas.filter(x => x.id !== editandoTemaId);
+            (mat.atividades || []).forEach(a => { if (Number(a.temaId) === editandoTemaId) a.temaId = null; });
+            editandoTemaId = null;
+            const det = detalhesAbertos();
+            renderMaterias();
+            if (det) openMateriaDetails(mat.id);
+            closeModal('modal-add-tema');
+        }
+
+        /* ---------- Atividades / notas ---------- */
+        let editandoAtividadeId = null;
+
+        function preencherTemasAtividade(mat, selecionado) {
+            document.getElementById('new-atv-tema').innerHTML = mat.temas.length
+                ? mat.temas.map(t => `<option value="${t.id}" ${Number(selecionado) === t.id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')
+                : '<option value="">Sem tema</option>';
+        }
+
+        function abrirAdicionarAtividade() {
+            const mat = getMateriaById(currentMateriaId);
+            if (!mat) return;
+            editandoAtividadeId = null;
+            preencherTemasAtividade(mat, null);
+            document.getElementById('atv-modal-titulo').innerText = 'Nova atividade / nota';
+            document.getElementById('new-atv-name').value = '';
+            document.getElementById('new-atv-type').selectedIndex = 0;
+            document.getElementById('new-atv-nota').value = '';
+            document.getElementById('new-atv-peso').value = '';
+            document.getElementById('new-atv-data').value = '';
+            const bt = document.getElementById('btn-excluir-atividade');
+            bt.style.display = 'none';
+            openModal('modal-add-atividade');
+        }
+
+        function abrirEditarAtividade(id) {
+            const mat = getMateriaById(currentMateriaId);
+            const a = mat && (mat.atividades || []).find(x => x.id === Number(id));
+            if (!a) return;
+            editandoAtividadeId = a.id;
+            preencherTemasAtividade(mat, a.temaId);
+            document.getElementById('atv-modal-titulo').innerText = 'Editar atividade / nota';
+            document.getElementById('new-atv-name').value = a.nome;
+            document.getElementById('new-atv-type').value = a.tipo;
+            document.getElementById('new-atv-nota').value = temNota(a) ? a.nota : '';
+            document.getElementById('new-atv-peso').value = a.peso || '';
+            document.getElementById('new-atv-data').value = a.data || '';
+            const bt = document.getElementById('btn-excluir-atividade');
+            bt.style.display = 'block'; bt.innerText = 'Excluir atividade'; delete bt.dataset.armado;
+            openModal('modal-add-atividade');
+        }
+
+        function salvarAtividade() {
+            const mat = getMateriaById(currentMateriaId);
+            const nome = document.getElementById('new-atv-name').value.trim();
+            const temaId = Number(document.getElementById('new-atv-tema').value);
+            const notaRaw = String(document.getElementById('new-atv-nota').value).trim().replace(',', '.');
+            if (!mat || !nome) return aviso('Preencha o nome da atividade.');
+            let nota = null;
+            if (notaRaw !== '') {
+                nota = Number(notaRaw);
+                if (!Number.isFinite(nota) || nota < 0 || nota > 10) return aviso('A nota deve estar entre 0 e 10.');
+            }
+            const dados = {
+                nome,
+                tipo: document.getElementById('new-atv-type').value,
+                temaId: temaId || null,
+                nota,
+                peso: Number(document.getElementById('new-atv-peso').value) || 1,
+                data: document.getElementById('new-atv-data').value || ''
+            };
+            const existente = editandoAtividadeId ? (mat.atividades || []).find(x => x.id === editandoAtividadeId) : null;
+            if (existente) Object.assign(existente, dados);
+            else mat.atividades.push(Object.assign({ id: Date.now() }, dados));
+            editandoAtividadeId = null;
+            const det = detalhesAbertos();
+            renderMaterias();
+            closeModal('modal-add-atividade');
+            if (det) openMateriaDetails(mat.id);
+            const need = numeroProva(dados) && nota !== null ? precisaNota(mat) : null;
+            aviso(need ? need.texto : 'Atividade salva.', need ? 6000 : 2800);
+        }
+
+        function excluirAtividade() {
+            const bt = document.getElementById('btn-excluir-atividade');
+            if (!bt.dataset.armado) {
+                bt.dataset.armado = '1';
+                bt.innerText = 'Toque de novo para confirmar';
+                setTimeout(() => { delete bt.dataset.armado; bt.innerText = 'Excluir atividade'; }, 3500);
+                return;
+            }
+            const mat = getMateriaById(currentMateriaId);
+            if (!mat) return;
+            mat.atividades = (mat.atividades || []).filter(x => x.id !== editandoAtividadeId);
+            editandoAtividadeId = null;
+            const det = detalhesAbertos();
+            renderMaterias();
+            closeModal('modal-add-atividade');
+            if (det) openMateriaDetails(mat.id);
+        }
+
+
+        /* ---------- Foto de perfil ---------- */
+        function atualizarAvatar() {
+            const ini = esc((state.user || 'TS').substring(0, 2).toUpperCase());
+            const html = state.foto ? `<img src="${state.foto}" alt="Foto de perfil">` : ini;
+            ['avatar-initials', 'perfil-foto-prev'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+            const rm = document.getElementById('btn-remover-foto-perfil');
+            if (rm) rm.style.display = state.foto ? 'flex' : 'none';
+        }
+
+        function recortarQuadrado(file, lado = 320, q = 0.8) {
+            return new Promise((resolve, reject) => {
+                const fr = new FileReader();
+                fr.onerror = reject;
+                fr.onload = () => {
+                    const img = new Image();
+                    img.onerror = reject;
+                    img.onload = () => {
+                        const m = Math.min(img.width, img.height);
+                        const c = document.createElement('canvas');
+                        c.width = c.height = lado;
+                        c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, lado, lado);
+                        resolve(c.toDataURL('image/jpeg', q));
+                    };
+                    img.src = fr.result;
+                };
+                fr.readAsDataURL(file);
+            });
+        }
+
+        async function definirFotoPerfil(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f) return;
+            try {
+                state.foto = await recortarQuadrado(f);
+                atualizarAvatar();
+                salvarLocal();
+                aviso('Foto de perfil atualizada.');
+            } catch (e) { aviso('Não consegui abrir essa imagem.'); }
+        }
+
+        function removerFotoPerfil() { state.foto = null; atualizarAvatar(); salvarLocal(); }
+
+        /* ---------- Espaço abaixo da barra de ícones ---------- */
+        let navExtra = 48;
+        function aplicarNavExtra() {
+            document.documentElement.style.setProperty('--nav-extra', navExtra + 'px');
+            const o = document.getElementById('nav-extra-val');
+            if (o) o.value = navExtra + ' px';
+        }
+        function ajustarEspacoNav(d) {
+            navExtra = Math.max(0, Math.min(96, navExtra + d));
+            aplicarNavExtra();
+            try { localStorage.setItem('studyPlannerNavExtra', String(navExtra)); } catch (e) {}
+        }
+
+        let state = {
+            user: "Thais",
+            materias: [
+                {
+                    id: 1, nome: "Administração", prof: "Prof. Silva", sem: 3,
+                    diff: "Médio", data: "2026-10-25", dp: false,
+                    temas: [
+                        {id: 101, nome: "Teoria das organizações", dificuldade: "Médio"},
+                        {id: 102, nome: "Gestão de pessoas", dificuldade: "Fácil"},
+                        {id: 103, nome: "Processos administrativos", dificuldade: "Difícil"}
+                    ],
+                    atividades: [
+                        {id: 1001, nome: "P1", tipo: "Prova", temaId: 101, nota: 8.5, peso: 4, data: "2026-10-25"},
+                        {id: 1002, nome: "Seminário", tipo: "Seminário", temaId: 102, nota: 9, peso: 2, data: "2026-10-18"}
+                    ]
+                },
+                {
+                    id: 2, nome: "Estatística", prof: "Prof. Costa", sem: 3,
+                    diff: "Difícil", data: "2026-10-11", dp: true,
+                    temas: [
+                        {id: 201, nome: "Distribuição de frequência", dificuldade: "Difícil"},
+                        {id: 202, nome: "Medidas de tendência central", dificuldade: "Médio"}
+                    ],
+                    atividades: [
+                        {id: 2001, nome: "P1", tipo: "Prova", temaId: 201, nota: 6.4, peso: 4, data: "2026-10-11"},
+                        {id: 2002, nome: "Lista de exercícios", tipo: "Exercício", temaId: 202, nota: 8, peso: 1, data: "2026-10-09"}
+                    ]
+                },
+                {
+                    id: 3, nome: "Python", prof: "Prof. Almeida", sem: 2,
+                    diff: "Fácil", data: "2026-10-20", dp: false,
+                    temas: [
+                        {id: 301, nome: "Estruturas de repetição", dificuldade: "Médio"},
+                        {id: 302, nome: "Matplotlib", dificuldade: "Fácil"}
+                    ],
+                    atividades: []
+                }
+            ]
+        };
+
+
+        function aviso(msg, ms) {
+            let t = document.getElementById('toast-aviso');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'toast-aviso';
+                t.style.cssText = 'position:fixed;left:50%;bottom:calc(96px + var(--nav-extra, 0px));transform:translateX(-50%);max-width:360px;width:calc(100% - 40px);background:#1f2937;color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.4;text-align:center;z-index:100;box-shadow:0 8px 20px rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.18);';
+                document.body.appendChild(t);
+            }
+            t.innerText = msg;
+            t.style.display = 'block';
+            clearTimeout(t._h);
+            t._h = setTimeout(() => t.style.display = 'none', ms || 2800);
+        }
+
+        let avisouQuota = false;
+        function salvarLocal() {
+            try {
+                localStorage.setItem('studyPlannerState', JSON.stringify(state));
+                avisouQuota = false;
+                return true;
+            } catch (e) {
+                if (!avisouQuota) {
+                    avisouQuota = true;
+                    aviso('Memória do navegador cheia: exporte um backup e remova algumas fotos dos temas.', 6000);
+                }
+                return false;
+            }
+        }
+
+        function carregarLocal() {
+            try {
+                const saved = localStorage.getItem('studyPlannerState');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.materias) state = parsed;
+                }
+            } catch(e) {}
+            state.materias.forEach(m => {
+                if (!m.temas) m.temas = [];
+                if (!m.atividades) m.atividades = [];
+            });
+        }
+
+        function aplicarModoEscuro(isDark) {
+            document.body.classList.toggle('dark', isDark);
+            document.getElementById('dark-mode-text').innerText = isDark ? 'Modo Claro' : 'Modo Escuro';
+            document.getElementById('dark-mode-icon').innerHTML = isDark ? icon('sun',20) : icon('moon',20);
+            const mt = document.getElementById('meta-theme');
+            if (mt) mt.setAttribute('content', isDark ? '#15171c' : '#6366f1');
+        }
+
+        function toggleDarkMode() {
+            const isDark = !document.body.classList.contains('dark');
+            aplicarModoEscuro(isDark);
+            try { localStorage.setItem('studyPlannerDark', isDark ? '1' : '0'); } catch (e) {}
+        }
+
+        function toggleNotifications() {
+            const dot = document.getElementById('notif-dot');
+            dot.style.transform = dot.style.transform === 'translateX(-20px)' ? 'translateX(0px)' : 'translateX(-20px)';
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.nav-btn[data-tab="${tabId}"]`).classList.add('active');
+        }
+
+        function salvarPerfil() {
+            let newName = document.getElementById('edit-nome').value;
+            if(newName.trim() !== '') {
+                state.user = newName;
+                salvarLocal();
+                document.getElementById('display-name').innerText = newName;
+                atualizarAvatar();
+                
+                let msg = document.getElementById('msg-sucesso-perfil');
+                msg.style.display = 'block';
+                setTimeout(() => msg.style.display = 'none', 3000);
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function openMateriaDetails(id) {
+            const mat = state.materias.find(m => m.id === id);
+            if(!mat) return;
+            currentMateriaId = id;
+
+            document.getElementById('det-mat-nome').innerText = mat.nome + (mat.dp ? " (DP)" : "");
+            document.getElementById('det-mat-prof').innerText = mat.prof;
+            document.getElementById('det-mat-sem').innerText = "Semestre " + mat.sem;
+            document.getElementById('det-mat-data').innerText = mat.data ? dataBR(mat.data) : '--/--/----';
+            document.getElementById('det-mat-nota').innerText = temNotas(mat) ? fmt(calcularMediaMateria(mat)) : '—';
+
+            const cor = corDe(mat.diff);
+            const diffBadge = document.getElementById('det-mat-diff');
+            diffBadge.style.backgroundColor = cor.bg;
+            diffBadge.style.color = cor.text;
+            diffBadge.innerText = mat.diff;
+
+            const need = precisaNota(mat);
+            const box = document.getElementById('det-mat-meta');
+            if (need) {
+                box.style.display = 'block';
+                box.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px;">Para passar com média ${MEDIA_ALVO}</div>
+                    ${need.tipo === 'need' ? `<div style="font-size:30px;font-weight:bold;color:${corMeta(need.tipo)};line-height:1.1;">${fmt(need.nota)} <span style="font-size:14px;font-weight:600;">na ${need.faltante}</span></div>` : ''}
+                    <div style="font-size:14px;margin-top:6px;line-height:1.45;color:${need.tipo === 'need' ? 'var(--text)' : corMeta(need.tipo)};">${need.texto}</div>
+                    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Média ponderada pelos pesos${need.assumido ? '; ' + need.faltante + ' considerada com peso ' + need.peso : ''}.</div>`;
+            } else {
+                box.style.display = 'none';
+                box.innerHTML = '';
+            }
+
+            document.getElementById('det-mat-temas').innerHTML = mat.temas.length
+                ? mat.temas.map(t => {
+                    const nf = (t.fotos || []).length;
+                    const ind = (t.texto ? icon('note', 14) : '') + (nf ? icon('image', 14) + `<span style="font-size:11px;">${nf}</span>` : '');
+                    return `<li><button class="row" onclick="abrirTema(${t.id})">
+                        <span class="row-main"><strong>${esc(t.nome)}</strong><small>${esc(t.dificuldade)}</small></span>
+                        <span style="display:flex;align-items:center;gap:4px;color:var(--muted);">${ind}</span>${icon('chevron', 16)}</button></li>`;
+                }).join('')
+                : '<li style="color:var(--muted);font-size:14px;">Nenhum tema cadastrado.</li>';
+
+            const atividades = mat.atividades || [];
+            document.getElementById('det-mat-atividades').innerHTML = atividades.length
+                ? atividades.map(a => {
+                    const tema = mat.temas.find(t => t.id === Number(a.temaId));
+                    return `<button class="row" style="flex-direction:column;align-items:stretch;gap:5px;" onclick="abrirEditarAtividade(${a.id})">
+                        <span style="display:flex;justify-content:space-between;gap:8px;">
+                            <strong style="font-size:14px;">${esc(a.nome)}</strong>
+                            <strong style="font-size:14px;${temNota(a) ? '' : 'color:var(--muted);font-weight:600;'}">${temNota(a) ? fmt(a.nota) : 'Pendente'}</strong>
+                        </span>
+                        <span style="font-size:12px;color:var(--muted);">${esc(a.tipo)} • ${tema ? esc(tema.nome) : 'Sem tema'} • Peso ${a.peso || 1}</span>
+                    </button>`;
+                }).join('')
+                : '<div style="color:var(--muted);font-size:14px;">Nenhuma atividade cadastrada.</div>';
+
+            openModal('modal-detalhes-materia');
+        }
+
+        function atualizarMediaGeral() {
+            const g = mediaGeral();
+            const txt = g ? fmt(g.valor) : '—';
+            const a = document.getElementById('dashboard-media');
+            const b = document.getElementById('dashboard-media-desempenho');
+            if (a) a.innerText = txt;
+            if (b) b.innerText = txt;
+            document.getElementById('count-temas').innerText = state.materias.reduce((n, m) => n + m.temas.length, 0);
+            document.getElementById('count-atv').innerText = pendentes().length;
+        }
+
+        function renderMaterias() {
+            const list = document.getElementById('materias-list');
+            const examList = document.getElementById('upcoming-exams-list');
+            list.innerHTML = '';
+            examList.innerHTML = '';
+
+            document.getElementById('count-materias').innerText = state.materias.length;
+
+            state.materias.forEach(mat => {
+                const cor = corDe(mat.diff);
+                const dpBadge = mat.dp ? `<span style="background: var(--danger-bg); color: var(--danger-text); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 8px;">DP</span>` : '';
+                const dataFormatada = mat.data.split('-').reverse().join('/');
+
+                list.innerHTML += `
+                <div data-mid="${mat.id}" onclick="openMateriaDetails(${mat.id})" class="card" style="display: flex; align-items: center; justify-content: space-between; cursor:pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+                    <div style="display: flex; gap: 12px; align-items: flex-start;">
+                        <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${cor.dot}; margin-top: 4px;"></div>
+                        <div>
+                            <h3 style="font-size: 16px; font-weight: bold; display: flex; align-items: center;">${mat.nome} ${dpBadge}</h3>
+                            <p style="font-size: 12px; color: var(--muted); margin-bottom: 8px;">${mat.prof} • Sem. ${mat.sem}</p>
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:7px;">${mat.temas.length} tema(s) • ${(mat.atividades||[]).length} atividade(s) com nota</div>
+                            <div style="display: flex; gap: 6px; font-size: 11px; font-weight: bold;">
+                                <span style="background: ${cor.bg}; color: ${cor.text}; padding: 2px 6px; border-radius: 4px;">${mat.diff}</span>
+                                <span style="background: var(--chip-bg); color: var(--chip-text); padding: 2px 6px; border-radius: 4px;">${dataFormatada}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); abrirAcoesMateria(${mat.id})" style="background:none;border:none;color:var(--subtle);display:flex;padding:6px;cursor:pointer;">${icon('more',20)}</button>
+                </div>`;
+
+                examList.innerHTML += `
+                <div onclick="openMateriaDetails(${mat.id})" class="card" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 36px; height: 36px; background: var(--accent-soft); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--accent-ink);">${icon('bookopen',18)}</div>
+                        <div>
+                            <h4 style="font-size: 14px; font-weight: bold;">${mat.nome}</h4>
+                            <p style="font-size: 12px; color: var(--muted);">${dataFormatada}</p>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById('ex-materia-select').innerHTML = state.materias.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+            atualizarTemasExercicios();
+            atualizarModoProgramacao();
+            renderDesempenho();
+            atualizarMediaGeral();
+        }
+
+        let editandoMateriaId = null;
+        let acoesMateriaId = null;
+
+        function novaMateria() {
+            editandoMateriaId = null;
+            ['new-mat-name','new-mat-prof','new-mat-sem','new-mat-date'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('new-mat-diff').selectedIndex = 0;
+            document.getElementById('new-mat-dp').checked = false;
+            document.getElementById('modal-mat-titulo').innerText = 'Nova Matéria';
+            document.getElementById('btn-salvar-materia').innerText = 'Salvar Matéria';
+            openModal('modal-add-materia');
+        }
+
+        function abrirAcoesMateria(id) {
+            const m = state.materias.find(x => x.id === Number(id));
+            if (!m) return;
+            acoesMateriaId = m.id;
+            document.getElementById('acoes-mat-nome').innerText = m.nome;
+            document.getElementById('acoes-mat-menu').style.display = 'flex';
+            document.getElementById('acoes-mat-confirma').style.display = 'none';
+            openModal('modal-acoes-materia');
+        }
+
+        function editarMateria(id) {
+            const m = state.materias.find(x => x.id === Number(id));
+            if (!m) return;
+            editandoMateriaId = m.id;
+            document.getElementById('new-mat-name').value = m.nome;
+            document.getElementById('new-mat-prof').value = m.prof === 'N/A' ? '' : m.prof;
+            document.getElementById('new-mat-sem').value = m.sem;
+            document.getElementById('new-mat-diff').value = m.diff;
+            document.getElementById('new-mat-date').value = m.data;
+            document.getElementById('new-mat-dp').checked = !!m.dp;
+            document.getElementById('modal-mat-titulo').innerText = 'Editar Matéria';
+            document.getElementById('btn-salvar-materia').innerText = 'Salvar Alterações';
+            closeModal('modal-acoes-materia');
+            openModal('modal-add-materia');
+        }
+
+        function pedirExclusao() {
+            document.getElementById('acoes-mat-menu').style.display = 'none';
+            document.getElementById('acoes-mat-confirma').style.display = 'flex';
+        }
+
+        function excluirMateria() {
+            state.materias = state.materias.filter(m => m.id !== acoesMateriaId);
+            if (currentMateriaId === acoesMateriaId) currentMateriaId = null;
+            acoesMateriaId = null;
+            closeModal('modal-acoes-materia');
+            closeModal('modal-detalhes-materia');
+            renderMaterias();
+        }
+
+        function salvarMateria() {
+            const nome = document.getElementById('new-mat-name').value.trim();
+            if(!nome) return aviso('Insira o nome da matéria!');
+            const dados = {
+                nome: nome,
+                prof: document.getElementById('new-mat-prof').value || 'N/A',
+                sem: document.getElementById('new-mat-sem').value || '1',
+                diff: document.getElementById('new-mat-diff').value,
+                data: document.getElementById('new-mat-date').value || '2026-12-01',
+                dp: document.getElementById('new-mat-dp').checked
+            };
+            const existente = editandoMateriaId ? state.materias.find(m => m.id === editandoMateriaId) : null;
+            if (existente) {
+                Object.assign(existente, dados);
+            } else {
+                state.materias.push(Object.assign({ id: Date.now(), temas: [], atividades: [] }, dados));
+            }
+            editandoMateriaId = null;
+            renderMaterias();
+            closeModal('modal-add-materia');
+        }
+
+        (function () {
+            const lista = document.getElementById('materias-list');
+            let timer = null, longo = false;
+            const cancelar = () => { clearTimeout(timer); timer = null; };
+            const iniciar = e => {
+                const card = e.target.closest('[data-mid]');
+                if (!card || e.target.closest('button')) return;
+                longo = false;
+                cancelar();
+                timer = setTimeout(() => {
+                    longo = true;
+                    if (navigator.vibrate) { try { navigator.vibrate(30); } catch (x) {} }
+                    abrirAcoesMateria(card.dataset.mid);
+                }, 500);
+            };
+            lista.addEventListener('touchstart', iniciar, { passive: true });
+            lista.addEventListener('mousedown', iniciar);
+            ['touchend', 'touchmove', 'touchcancel', 'mouseup', 'mouseleave'].forEach(ev => lista.addEventListener(ev, cancelar, { passive: true }));
+            lista.addEventListener('contextmenu', e => { if (e.target.closest('[data-mid]')) e.preventDefault(); });
+            lista.addEventListener('click', e => {
+                if (longo) { e.stopPropagation(); e.preventDefault(); longo = false; }
+            }, true);
+        })();
+
+        let currentExercise = null;
+        let currentMateriaId = null;
+
+        function getMateriaById(id) {
+            return state.materias.find(m => m.id === Number(id));
+        }
+
+        function calcularMediaMateria(mat) {
+            const validas = (mat.atividades || []).filter(temNota);
+            if (!validas.length) return 0;
+            const soma = validas.reduce((s, a) => s + pesoDe(a), 0);
+            return validas.reduce((s, a) => s + Number(a.nota) * pesoDe(a), 0) / soma;
+        }
+
+
+
+
+
+
+
+
+
+        function atualizarTemasExercicios() {
+            const mat = getMateriaById(document.getElementById('ex-materia-select').value);
+            const select = document.getElementById('ex-tema-select');
+            select.innerHTML = mat && mat.temas.length
+                ? mat.temas.map(t => `<option value="${t.id}">${t.nome}</option>`).join('')
+                : '<option value="">Cadastre um tema primeiro</option>';
+            atualizarTiposExercicios();
+        }
+
+        function atualizarTiposExercicios() {
+            // Mantém os três formatos disponíveis; o contexto escolhido determina a questão.
+            document.getElementById('ex-tipo-select').disabled =
+                !document.getElementById('ex-tema-select').value;
+        }
+
+        function atualizarModoProgramacao() {
+            const tipo = document.getElementById('ex-tipo-select').value;
+            const wrap = document.getElementById('programming-language-wrap');
+            if (wrap) wrap.style.display = tipo === 'programar' ? 'block' : 'none';
+        }
+
+        function gerarExercicioSelecionado() {
+            const mat = getMateriaById(document.getElementById('ex-materia-select').value);
+            const tema = mat?.temas.find(t => t.id === Number(document.getElementById('ex-tema-select').value));
+            const tipo = document.getElementById('ex-tipo-select').value;
+            if (!mat || !tema) return aviso('Cadastre um tema para esta matéria antes de praticar.');
+
+            const area = document.getElementById('exercicios-gerados');
+            const texto = document.getElementById('questao-texto');
+            const opcoes = document.getElementById('questao-opcoes');
+            const feedback = document.getElementById('questao-feedback');
+
+            const tipoNome = tipo === 'conta' ? 'Cálculo' :
+                             tipo === 'alternativa' ? 'Alternativa' :
+                             tipo === 'dissertacao' ? 'Dissertação' : 'Programação';
+
+            document.getElementById('exercise-context').innerText =
+                `${mat.nome} • ${tema.nome} • ${tipoNome}`;
+            area.style.display = 'block';
+            feedback.style.display = 'none';
+            feedback.innerHTML = '';
+
+            if (tipo === 'programar') {
+                const linguagem = document.getElementById('ex-linguagem-select').value;
+                gerarDesafioProgramacao(mat, tema, linguagem);
+                return;
+            }
+
+            if (tipo === 'conta') {
+                currentExercise = {
+                    answer: 10,
+                    resolution: "<strong>Resolução:</strong> h = At / k = 50 / 5 = 10."
+                };
+                texto.innerText = `Exercício de cálculo — ${tema.nome}: em uma distribuição de frequências, At = 50 e k = 5. Calcule h.`;
+                opcoes.innerHTML = `<input type="number" id="ex-input-exatas" placeholder="Digite o resultado..."><button class="primary" onclick="verificarExatas()">Verificar</button>`;
+            } else if (tipo === 'alternativa') {
+                currentExercise = { correctOption: 'B', resolution: "<strong>Resposta:</strong> a alternativa B é a correta." };
+                texto.innerText = `Questão de alternativa — ${tema.nome}: qual afirmação melhor representa o conceito estudado?`;
+                opcoes.innerHTML = `
+                    <div onclick="verificarHumanas('A',this)" class="card opcao-btn" style="cursor:pointer;">A) Aplicar o conceito sem considerar o contexto.</div>
+                    <div onclick="verificarHumanas('B',this)" class="card opcao-btn" style="cursor:pointer;">B) Relacionar o conceito ao problema e ao contexto da matéria.</div>
+                    <div onclick="verificarHumanas('C',this)" class="card opcao-btn" style="cursor:pointer;">C) Ignorar as informações do tema.</div>`;
+            } else {
+                texto.innerText = `Questão de dissertação — ${tema.nome}: explique, com suas palavras, o conceito principal deste tema e dê um exemplo de aplicação.`;
+                opcoes.innerHTML = `<textarea id="ex-dissertacao" rows="7" placeholder="Digite sua resposta..."></textarea>
+                    <button class="primary" onclick="avaliarDissertacao()">Conferir resposta</button>`;
+                currentExercise = {type:'dissertacao'};
+            }
+        }
+
+        function gerarDesafioProgramacao(mat, tema, linguagem) {
+            const texto = document.getElementById('questao-texto');
+            const opcoes = document.getElementById('questao-opcoes');
+
+            // Desafios adaptados aos temas de programação mais comuns.
+            const nomeTema = tema.nome.toLowerCase();
+            let desafio;
+
+            if (nomeTema.includes('repet') || nomeTema.includes('loop') || nomeTema.includes('for') || nomeTema.includes('while')) {
+                desafio = {
+                    titulo: 'Contador de números pares',
+                    enunciado: 'Crie um programa que leia um número N e mostre todos os números pares de 1 até N. Ao final, informe quantos números pares foram encontrados.',
+                    entrada: 'Um número inteiro N.',
+                    saida: 'Os números pares de 1 até N e, na última linha, a quantidade de pares.',
+                    exemplo: 'Entrada: 10\\nSaída:\\n2 4 6 8 10\\nQuantidade: 5',
+                    requisitos: ['Use uma estrutura de repetição.', 'Não coloque os números manualmente.', 'O programa deve funcionar para qualquer N inteiro positivo.']
+                };
+            } else if (nomeTema.includes('lista') || nomeTema.includes('vetor') || nomeTema.includes('array')) {
+                desafio = {
+                    titulo: 'Maior valor de uma lista',
+                    enunciado: 'Crie um programa que receba vários números e encontre o maior valor da lista.',
+                    entrada: 'Uma quantidade N e depois N números.',
+                    saida: 'O maior número informado.',
+                    exemplo: 'Entrada: 5\\n3 17 8 2 11\\nSaída: 17',
+                    requisitos: ['Percorra a estrutura de dados.', 'Não use uma função pronta de máximo.', 'Seu programa deve funcionar para qualquer quantidade N.']
+                };
+            } else if (nomeTema.includes('funç')) {
+                desafio = {
+                    titulo: 'Função para calcular média',
+                    enunciado: 'Crie uma função que receba três notas e retorne a média aritmética. Depois, informe se o aluno foi aprovado (média maior ou igual a 6).',
+                    entrada: 'Três números reais representando as notas.',
+                    saida: 'A média e a situação do aluno.',
+                    exemplo: 'Entrada: 7 8 5\\nSaída: Média: 6.67\\nSituação: Aprovado',
+                    requisitos: ['Crie uma função para calcular a média.', 'A função deve retornar o resultado.', 'A decisão de aprovado/reprovado deve ser feita fora da função.']
+                };
+            } else if (nomeTema.includes('matplotlib') || nomeTema.includes('gráf')) {
+                desafio = {
+                    titulo: 'Gráfico de valores',
+                    enunciado: 'Crie um programa que armazene cinco valores e gere um gráfico de barras mostrando esses valores. Adicione título e identificação dos eixos.',
+                    entrada: 'Cinco valores numéricos definidos pelo usuário.',
+                    saida: 'Um gráfico de barras com os cinco valores.',
+                    exemplo: 'Valores: 10, 15, 8, 20, 12\\nResultado: gráfico de barras com os cinco valores.',
+                    requisitos: ['Use Matplotlib.', 'Adicione título ao gráfico.', 'Identifique os eixos.', 'Cada valor deve aparecer no gráfico.']
+                };
+            } else {
+                desafio = {
+                    titulo: 'Analisador de números',
+                    enunciado: 'Crie um programa que leia três números inteiros e informe qual é o maior, qual é o menor e a média dos três valores.',
+                    entrada: 'Três números inteiros.',
+                    saida: 'Maior valor, menor valor e média.',
+                    exemplo: 'Entrada: 4 9 2\\nSaída:\\nMaior: 9\\nMenor: 2\\nMédia: 5.0',
+                    requisitos: ['Receba os dados do usuário.', 'Faça os cálculos no programa.', 'Mostre os resultados de forma organizada.']
+                };
+            }
+
+            currentExercise = { type:'programar', desafio, linguagem };
+
+            texto.innerHTML = `<div style="font-size:17px;margin-bottom:6px;">${desafio.titulo}</div>
+                <div style="font-size:14px;font-weight:400;line-height:1.55;">${desafio.enunciado}</div>`;
+
+            opcoes.innerHTML = `
+                <div class="challenge-box">
+                    <strong style="font-size:13px;">Entrada</strong>
+                    <p style="font-size:13px;margin-top:6px;color:var(--muted);">${desafio.entrada}</p>
+                </div>
+                <div class="challenge-box">
+                    <strong style="font-size:13px;">Saída esperada</strong>
+                    <p style="font-size:13px;margin-top:6px;color:var(--muted);">${desafio.saida}</p>
+                </div>
+                <div class="challenge-box">
+                    <strong style="font-size:13px;">Exemplo</strong>
+                    <div class="test-case">${desafio.exemplo}</div>
+                </div>
+                <div class="challenge-box">
+                    <strong style="font-size:13px;">Requisitos</strong>
+                    <ul style="margin:8px 0 0 18px;font-size:13px;color:var(--muted);line-height:1.6;">
+                        ${desafio.requisitos.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+                <label style="font-size:13px;font-weight:600;">Seu código em ${linguagem}
+                    <textarea id="codigo-resposta" class="code-editor" spellcheck="false" placeholder="Digite seu código aqui..."></textarea>
+                </label>
+                <button class="primary" onclick="verificarCodigo()">Verificar exercício</button>
+                <button onclick="mostrarDicaProgramacao()" style="width:100%;padding:12px;border:1px solid var(--border);background:transparent;border-radius:12px;font-weight:600;cursor:pointer;color:inherit;">Mostrar dica</button>
+                <div id="programming-hint" style="display:none;background:var(--accent-bg);color:var(--accent-ink);padding:12px;border-radius:10px;font-size:13px;">
+                    Dica: divida o problema em três partes: entrada dos dados, processamento e saída. Antes de escrever o código, pense em quais variáveis e estruturas você precisa.
+                </div>`;
+        }
+
+        function mostrarDicaProgramacao() {
+            const el = document.getElementById('programming-hint');
+            if (el) el.style.display = 'block';
+        }
+
+        function verificarCodigo() {
+            const codigo = document.getElementById('codigo-resposta').value.trim();
+            const feedback = document.getElementById('questao-feedback');
+            feedback.style.display = 'block';
+
+            if (!codigo) {
+                feedback.innerHTML = `<div style="color:var(--bad);font-weight:bold;">Digite seu código primeiro.</div>`;
+                return;
+            }
+
+            const linguagem = currentExercise?.linguagem || 'linguagem escolhida';
+            const min = linguagem === 'Python' ? ['input', 'print'] : [];
+            const possuiEstrutura = min.length === 0 || min.some(t => codigo.toLowerCase().includes(t));
+
+            feedback.innerHTML = possuiEstrutura
+                ? `<div style="color:var(--ok);font-weight:bold;margin-bottom:8px;">Código recebido</div>
+                   <div style="font-size:14px;">O planner recebeu sua solução. Para uma correção completa, seria necessário executar o código e comparar o resultado com testes.</div>`
+                : `<div style="color:#f97316;font-weight:bold;margin-bottom:8px;">Revise sua solução</div>
+                   <div style="font-size:14px;">Seu código não parece conter a estrutura básica esperada para ${linguagem}. Confira entrada, processamento e saída.</div>`;
+        }
+
+        function avaliarDissertacao() {
+            const value = document.getElementById('ex-dissertacao').value.trim();
+            const feedback = document.getElementById('questao-feedback');
+            feedback.style.display = 'block';
+            feedback.innerHTML = value.length >= 30
+                ? `<div style="color:var(--ok);font-weight:bold;margin-bottom:8px;">Resposta registrada</div><div style="font-size:14px;">Sua resposta tem uma boa extensão. Revise se você explicou o conceito, usou termos do tema e apresentou um exemplo.</div>`
+                : `<div style="color:var(--bad);font-weight:bold;margin-bottom:8px;">Resposta muito curta</div><div style="font-size:14px;">Tente desenvolver o conceito e acrescentar um exemplo.</div>`;
+        }
+
+
+        function gerarExercicios() {
+            const materia = document.getElementById('ex-materia-select').value;
+            const area = document.getElementById('exercicios-gerados');
+            const texto = document.getElementById('questao-texto');
+            const opcoes = document.getElementById('questao-opcoes');
+            const feedback = document.getElementById('questao-feedback');
+            
+            area.style.display = 'block';
+            feedback.style.display = 'none';
+            feedback.innerHTML = '';
+            
+            if(materia === 'Estatística') {
+                currentExercise = {
+                    answer: 10,
+                    resolution: "<strong>Resolução:</strong> A amplitude do intervalo de classe (h) é calculada dividindo a Amplitude Total (At) pelo número de classes (k).<br><br>Fórmula: h = At / k<br>Cálculo: h = 50 / 5 = 10."
+                };
+                texto.innerText = "Prática de Cálculo: Numa distribuição de frequências, os dados foram agrupados em 5 classes (k=5). A amplitude total (At) é 50. Calcule a amplitude do intervalo de classe (h).";
+                opcoes.innerHTML = `
+                    <input type="number" id="ex-input-exatas" placeholder="Insira o resultado numérico...">
+                    <button class="primary" onclick="verificarExatas()">Verificar Cálculo</button>
+                `;
+            } else {
+                currentExercise = {
+                    correctOption: 'B',
+                    resolution: "<strong>Resolução:</strong> A Teoria Geral dos Sistemas, de Bertalanffy, revolucionou a administração ao propor que as empresas não são entidades fechadas, mas sim 'sistemas abertos' que interagem constantemente com o ambiente externo."
+                };
+                texto.innerText = `Questão Teórica de ${materia}: Qual é o principal impacto da Teoria de Sistemas (Ludwig von Bertalanffy) nas organizações modernas?`;
+                opcoes.innerHTML = `
+                    <div onclick="verificarHumanas('A', this)" class="card opcao-btn" style="cursor:pointer;">A) Promover o isolamento departamental para maior foco estruturado.</div>
+                    <div onclick="verificarHumanas('B', this)" class="card opcao-btn" style="cursor:pointer;">B) Estabelecer uma visão holística e reconhecer a interação contínua com o ambiente externo.</div>
+                    <div onclick="verificarHumanas('C', this)" class="card opcao-btn" style="cursor:pointer;">C) Focar exclusivamente em métricas de tempo e movimento operacionais.</div>
+                `;
+            }
+        }
+
+        function verificarExatas() {
+            const inputVal = parseFloat(document.getElementById('ex-input-exatas').value);
+            const feedback = document.getElementById('questao-feedback');
+            feedback.style.display = 'block';
+
+            if(inputVal === currentExercise.answer) {
+                feedback.innerHTML = `<div style="color: var(--ok); font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">${icon('check',16)}Resposta Correta!</div><div style="font-size: 14px; background: var(--ok-bg); padding: 12px; border-radius: 8px;">${currentExercise.resolution}</div>`;
+            } else {
+                feedback.innerHTML = `<div style="color: var(--bad); font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">${icon('x',16)}Resposta Incorreta</div><div style="font-size: 14px;">Tente novamente.</div>`;
+            }
+        }
+
+        function verificarHumanas(escolha, element) {
+            document.querySelectorAll('.opcao-btn').forEach(btn => btn.style.pointerEvents = 'none');
+            const feedback = document.getElementById('questao-feedback');
+            feedback.style.display = 'block';
+
+            if(escolha === currentExercise.correctOption) {
+                element.style.borderColor = 'var(--ok)';
+                element.style.background = 'var(--ok-bg)';
+                feedback.innerHTML = `<div style="color: var(--ok); font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">${icon('check',16)}Exatamente!</div><div style="font-size: 14px; background: var(--ok-bg); padding: 12px; border-radius: 8px;">${currentExercise.resolution}</div>`;
+            } else {
+                element.style.borderColor = 'var(--bad)';
+                element.style.background = 'var(--danger-bg)';
+                feedback.innerHTML = `<div style="color: var(--bad); font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">${icon('x',16)}Incorreto</div><div style="font-size: 14px;">A alternativa correta era a <strong>${currentExercise.correctOption}</strong>.<br><br>${currentExercise.resolution}</div>`;
+            }
+        }
+
+        function renderDesempenho() {
+            const list = document.getElementById('desempenho-materias-list');
+            list.innerHTML = '';
+
+            state.materias.forEach(mat => {
+                const tem = temNotas(mat);
+                const matNota = calcularMediaMateria(mat);
+                const percent = (matNota / 10) * 100;
+                const color = matNota >= 7 ? '#6366f1' : (matNota >= MEDIA_ALVO ? '#10b981' : '#ef4444');
+                const need = precisaNota(mat);
+
+                list.innerHTML += `
+                <div>
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; margin-bottom: 6px;">
+                        <span>${esc(mat.nome)}</span>
+                        <span>${tem ? fmt(matNota) : "—"}</span>
+                    </div>
+                    <div style="width: 100%; background: var(--border); border-radius: 9999px; height: 10px; overflow: hidden;">
+                        <div style="background: ${color}; height: 100%; width: ${percent}%;"></div>
+                    </div>
+                    ${need ? `<div style="font-size:12px;margin-top:6px;color:${corMeta(need.tipo)};">${esc(need.curto)}</div>` : ''}
+                </div>`;
+            });
+        }
+
+
+        function msgBackup(t) { const e = document.getElementById('backup-status'); if (e) e.innerText = t; }
+
+        function mostrarUltimoBackup() {
+            let t = null;
+            try { t = localStorage.getItem('studyPlannerUltimoBackup'); } catch(e) {}
+            msgBackup(t ? 'Último backup: ' + new Date(Number(t)).toLocaleDateString('pt-BR') : 'Nenhum backup feito ainda.');
+        }
+
+        async function exportarBackup() {
+            const data = JSON.stringify({ app: 'study-planner', versao: 1, exportado: new Date().toISOString(), state: state }, null, 2);
+            const nome = 'study-planner-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+            let ok = false;
+            try {
+                const dl = window.claude ? await window.claude.use('downloads') : null;
+                if (dl) { await dl.save({ filename: nome, data: data }); ok = true; }
+            } catch (e) {
+                if (e && e.code === 'declined') { msgBackup('Download cancelado.'); return; }
+            }
+            if (!ok) {
+                try {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+                    a.download = nome;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    ok = true;
+                } catch (e) {}
+            }
+            if (ok) {
+                try { localStorage.setItem('studyPlannerUltimoBackup', String(Date.now())); } catch (e) {}
+                mostrarUltimoBackup();
+            } else {
+                msgBackup('Não foi possível gerar o backup neste navegador.');
+            }
+        }
+
+        function importarBackup(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    const novo = parsed && parsed.state ? parsed.state : parsed;
+                    if (!novo || !Array.isArray(novo.materias)) throw new Error('formato');
+                    try { localStorage.setItem('studyPlannerAntesImport', JSON.stringify(state)); } catch (e) {}
+                    state = novo;
+                    state.materias.forEach(m => { if (!m.temas) m.temas = []; if (!m.atividades) m.atividades = []; });
+                    if (!state.user) state.user = 'Thais';
+                    document.getElementById('edit-nome').value = state.user;
+                    document.getElementById('display-name').innerText = state.user;
+                    atualizarAvatar();
+                    renderMaterias();
+                    msgBackup('Backup restaurado com sucesso.');
+                } catch (e) {
+                    msgBackup('Arquivo inválido. Escolha um backup .json gerado por este app.');
+                }
+                input.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        const _renderMateriasOriginal = renderMaterias;
+        renderMaterias = function () { _renderMateriasOriginal(); salvarLocal(); };
+
+        try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+
+        carregarLocal();
+        try { const v = localStorage.getItem('studyPlannerNavExtra'); if (v !== null) navExtra = Number(v) || 0; } catch (e) {}
+        aplicarNavExtra();
+        try { aplicarModoEscuro(localStorage.getItem('studyPlannerDark') === '1'); } catch (e) {}
+        document.getElementById('edit-nome').value = state.user;
+        document.getElementById('display-name').innerText = state.user;
+        atualizarAvatar();
+        atualizarAvatar();
+        renderMaterias();
+        mostrarUltimoBackup();
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+        }
+    </script>
+</body>
+</html>
